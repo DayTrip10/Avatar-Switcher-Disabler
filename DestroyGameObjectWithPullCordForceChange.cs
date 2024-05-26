@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Reflection;
 using UnityEngine;
 using SLZ.Props;
 using MelonLoader;
+using HarmonyLib;
 
-namespace bonelab_template
+namespace MyGameMods
 {
     public class DestroyGameObjectWithPullCordForceChange : MelonMod
     {
@@ -13,6 +15,8 @@ namespace bonelab_template
         public override void OnApplicationStart()
         {
             MelonLogger.Msg("DestroyGameObjectWithPullCordForceChange mod loaded");
+            HarmonyLib.Harmony harmony = new HarmonyLib.Harmony("com.daytrip.DestroyGameObjectWithPullCordForceChange");
+            harmony.PatchAll(Assembly.GetExecutingAssembly());
         }
 
         public override void OnUpdate()
@@ -28,6 +32,21 @@ namespace bonelab_template
                     MelonLogger.Msg($"Found and destroyed GameObject: {objectName}");
                 }
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(PullCordForceChange))]
+    [HarmonyPatch("Pull")]
+    public static class ForcePullPatch
+    {
+        static void Prefix(PullCordForceChange __instance)
+        {
+            MelonLogger.Msg("Pull method called, executing prefix...");
+        }
+
+        static void Postfix(PullCordForceChange __instance)
+        {
+            MelonLogger.Msg("Pull method executed, executing postfix...");
         }
     }
 }
