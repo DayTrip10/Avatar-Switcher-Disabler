@@ -1,52 +1,39 @@
 ﻿using System;
-using System.Reflection;
 using UnityEngine;
-using SLZ.Props;
 using MelonLoader;
 using HarmonyLib;
+using SLZ.Props;
 
 namespace MyGameMods
 {
-    public class DestroyGameObjectWithPullCordForceChange : MelonMod
+    public class Daytrip : MelonMod
     {
-        private float checkInterval = 5.0f; // Check every 5 seconds
-        private float nextCheckTime = 0.0f;
+        private HarmonyLib.Harmony harmony;
 
         public override void OnApplicationStart()
         {
-            MelonLogger.Msg("DestroyGameObjectWithPullCordForceChange mod loaded");
-            HarmonyLib.Harmony harmony = new HarmonyLib.Harmony("com.daytrip.DestroyGameObjectWithPullCordForceChange");
-            harmony.PatchAll(Assembly.GetExecutingAssembly());
+            MelonLogger.Msg("Daytrip mod loaded");
+            harmony = new HarmonyLib.Harmony("com.daytrip.DestroyGameObjectWithPullCordForceChange");
+            harmony.PatchAll(typeof(Daytrip).Assembly);
         }
 
-        public override void OnUpdate()
-        {
-            if (Time.time >= nextCheckTime)
-            {
-                nextCheckTime = Time.time + checkInterval;
-                PullCordForceChange[] pullCordForceChanges = GameObject.FindObjectsOfType<PullCordForceChange>();
-                foreach (PullCordForceChange pullCordForceChange in pullCordForceChanges)
-                {
-                    string objectName = pullCordForceChange.gameObject.name;
-                    GameObject.Destroy(pullCordForceChange.gameObject);
-                    MelonLogger.Msg($"Found and destroyed GameObject: {objectName}");
-                }
-            }
-        }
+        // No need for OnUpdate if using Harmony for patching
     }
 
-    [HarmonyPatch(typeof(PullCordForceChange))]
-    [HarmonyPatch("Pull")]
-    public static class ForcePullPatch
+    [HarmonyPatch(typeof(UnityEngine.Object), "Instantiate", typeof(UnityEngine.Object), typeof(Vector3), typeof(Quaternion), typeof(Transform))]
+    public static class InstantiatePatch
     {
-        static void Prefix(PullCordForceChange __instance)
+        static void Prefix(ref UnityEngine.Object original, ref Vector3 position, ref Quaternion rotation, Transform parent)
         {
-            MelonLogger.Msg("Pull method called, executing prefix...");
-        }
-
-        static void Postfix(PullCordForceChange __instance)
-        {
-            MelonLogger.Msg("Pull method executed, executing postfix...");
+            // Check if the object being instantiated has the PullCordForceChange component
+            if (original is GameObject originalGameObject)
+            {
+                if (originalGameObject.GetComponent<PullCordForceChange>() != null)
+                {
+                    MelonLogger.Msg($"Destroying GameObject with PullCordForceChange component: {originalGameObject.name}");
+                    UnityEngine.Object.Destroy(originalGameObject);
+                }
+            }
         }
     }
 }
