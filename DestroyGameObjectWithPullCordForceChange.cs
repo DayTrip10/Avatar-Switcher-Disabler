@@ -1,67 +1,41 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
+using SLZ.Props;
 using MelonLoader;
 using HarmonyLib;
-using SLZ.Props;
 
-namespace MyGameMods
+namespace bonelab_template
 {
-    public class DestroyGameObjectWithPullCordForceChange : MonoBehaviour
+    public class DestroyGameObjectWithPullCordForceChange : MelonMod
     {
-        private void Awake()
-        {
-            MelonLogger.Msg("DestroyGameObjectWithPullCordForceChange script attached and awake.");
-        }
+        private float checkInterval = 5.0f; // Check every 5 seconds
+        private float nextCheckTime = 0.0f;
 
-        private void Start()
-        {
-            MelonLogger.Msg("DestroyGameObjectWithPullCordForceChange script started.");
-        }
-    }
-
-    [HarmonyPatch(typeof(UnityEngine.Object))]
-    [HarmonyPatch("Instantiate", typeof(UnityEngine.Object), typeof(Vector3), typeof(Quaternion), typeof(Transform))]
-    public static class InstantiatePatch
-    {
-        [HarmonyPrefix]
-        public static bool Prefix(ref UnityEngine.Object original, ref Vector3 position, ref Quaternion rotation, Transform parent)
-        {
-            // Check if the object being instantiated is a GameObject
-            if (original is GameObject originalGameObject)
-            {
-                // Log the name of the GameObject being instantiated
-                MelonLogger.Msg($"Attempting to instantiate GameObject: {originalGameObject.name}");
-
-                // Check if the GameObject has a PullCordForceChange component
-                if (originalGameObject.GetComponent<PullCordForceChange>() != null)
-                {
-                    // Log the destruction of the GameObject
-                    MelonLogger.Msg($"Destroying GameObject with PullCordForceChange component: {originalGameObject.name}");
-
-                    // Destroy the GameObject and prevent instantiation
-                    UnityEngine.Object.Destroy(originalGameObject);
-                    return false; // Skip the original Instantiate method
-                }
-            }
-
-            // Continue with the original Instantiate method
-            return true;
-        }
-    }
-
-    public class MainMod : MelonMod
-    {
         public override void OnApplicationStart()
         {
-            MelonLogger.Msg("MainMod loaded. Creating GameObject with DestroyGameObjectWithPullCordForceChange script.");
+            MelonLogger.Msg("DestroyGameObjectWithPullCordForceChange mod loaded");
 
-            // Create a new GameObject in the scene
-            GameObject newGameObject = new GameObject("DestroyGameObjectWithPullCordForceChangeObj");
+            // Initialize Harmony
+            HarmonyLib.Harmony harmony = new HarmonyLib.Harmony("com.mygamemods.destroywithpullcordforcechange");
 
-            // Attach the DestroyGameObjectWithPullCordForceChange script to the new GameObject
-            newGameObject.AddComponent<DestroyGameObjectWithPullCordForceChange>();
+            // Apply the Harmony patch
+            harmony.Patch(typeof(PullCordForceChange).GetMethod("Update"), new HarmonyLib.HarmonyMethod(typeof(DestroyGameObjectWithPullCordForceChange), nameof(Prefix)));
+        }
 
-            // Optionally, set the GameObject to not be destroyed on load
-            UnityEngine.Object.DontDestroyOnLoad(newGameObject);
+        private bool Prefix(PullCordForceChange __instance)
+        {
+            // Destroy the GameObject if it has the PullCordForceChange component
+            string objectName = __instance.gameObject.name;
+            GameObject.Destroy(__instance.gameObject);
+            MelonLogger.Msg($"Found and destroyed GameObject: {objectName}");
+
+            // Skip the original Update method
+            return false;
+        }
+
+        public override void OnUpdate()
+        {
+            // This method can be left empty since the patching handles the behavior.
         }
     }
 }
