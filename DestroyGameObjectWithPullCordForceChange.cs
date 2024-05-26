@@ -4,6 +4,7 @@ using UnityEngine;
 using SLZ.Props;
 using MelonLoader;
 using HarmonyLib;
+using System.Security.AccessControl;
 
 namespace bonelab_template
 {
@@ -45,6 +46,8 @@ namespace bonelab_template
             {
                 if (method.Name == "Awake" || method.Name == "Start" || method.Name == "OnTriggerEnter")
                 {
+                    MelonLogger.Msg($"Mod Started SIGMA OHIO GYATT");
+
                     return method;
                 }
             }
